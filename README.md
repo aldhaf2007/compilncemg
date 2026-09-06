@@ -26,7 +26,9 @@ compilncemg/
 ├── config.py           # Configuration settings & Environment variables
 ├── db_setup.py         # SQLite database schema initialization & seed script
 ├── convert_sqlite.py   # Database migration/utility helper
-├── requirements.txt    # Python package dependencies
+├── requirements.txt    # Python package dependencies (Flask, Gunicorn, PyJWT, etc.)
+├── Procfile            # Render / Heroku Web process declaration
+├── render.yaml         # Render Blueprint configuration for 1-click deploy
 ├── setup.bat / .sh     # Automated setup script (Windows / Linux)
 ├── run.bat / .sh       # Application launcher script (Windows / Linux)
 ├── static/             # Frontend UI assets
@@ -40,7 +42,7 @@ compilncemg/
 
 ---
 
-## 🚀 Quick Start Guide
+## 🚀 Quick Start Guide (Local Development)
 
 ### Prerequisites
 - Python 3.9 or higher installed.
@@ -77,7 +79,7 @@ Available environment variables:
 
 ---
 
-### 3. Running the Application
+### 3. Running the Application Locally
 
 #### On Linux / macOS:
 ```bash
@@ -92,6 +94,35 @@ run.bat
 
 Open your browser and navigate to:
 **`http://127.0.0.1:5000`**
+
+---
+
+## ☁️ Deploying to Render
+
+### Option A: 1-Click Deployment with Render Blueprints (Recommended)
+
+1. Log in to [Render Dashboard](https://dashboard.render.com/).
+2. Click **New +** and select **Blueprint**.
+3. Connect your GitHub repository: `aldhaf2007/compilncemg`.
+4. Render will automatically read `render.yaml`, configure the Python environment, run the database setup, and deploy the service with `gunicorn app:app`.
+5. Click **Apply**.
+
+---
+
+### Option B: Manual Web Service Deployment on Render
+
+1. Log in to [Render Dashboard](https://dashboard.render.com/).
+2. Click **New +** -> **Web Service**.
+3. Select your repository `aldhaf2007/compilncemg`.
+4. Configure the service settings:
+   - **Name**: `compilncemg`
+   - **Environment**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt && python db_setup.py`
+   - **Start Command**: `gunicorn app:app`
+5. Add Environment Variables under **Advanced**:
+   - `JWT_SECRET`: *(Enter a secure random string)*
+   - `PYTHON_VERSION`: `3.11.9`
+6. Click **Create Web Service**.
 
 ---
 
@@ -112,9 +143,9 @@ Initial seed users pre-populated by `db_setup.py`:
 
 ## 🔌 API Endpoints Summary
 
-- `POST /api/register` - User registration
-- `POST /api/login` - User authentication & JWT generation
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User authentication & JWT generation
 - `GET /api/complaints` - Fetch complaints list (role-filtered)
 - `POST /api/complaints` - File a new complaint (with optional evidence file upload)
 - `PUT /api/complaints/<id>` - Update complaint status/assignment
-- `GET /api/dashboard/stats` - Fetch aggregate stats for charts
+- `GET /api/analytics` - Fetch aggregate stats for charts

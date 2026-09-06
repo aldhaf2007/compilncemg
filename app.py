@@ -17,6 +17,12 @@ app.config.from_object(Config)
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+# Auto-initialize SQLite database if not present
+if not os.path.exists(app.config['DB_FILE_PATH']):
+    from db_setup import setup_database
+    setup_database()
+
+
 def dict_factory(cursor, row):
     return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
 
@@ -664,5 +670,7 @@ def admin_delete_user(current_user, user_id):
         return jsonify({'message': f'Database error: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    # Start internal webserver
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1')
+    app.run(host='0.0.0.0', port=port, debug=debug)
+
