@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMS - Registration Portal</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <h1>CMS Portal</h1>
+            </div>
+            
+            <div class="auth-header">
+                <h2>Create Account</h2>
+                <p>Register a new account to file or manage complaints securely.</p>
+            </div>
+
+            <div id="alert-box" class="alert" style="display: none;"></div>
+
+            <form id="register-form" novalidate>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        class="input-control" 
+                        autocomplete="username" 
+                        required 
+                        minlength="3" 
+                        placeholder="Choose username"
+                        enterkeyhint="next"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="input-control" 
+                        autocomplete="new-password" 
+                        required 
+                        minlength="6" 
+                        placeholder="Choose password"
+                        enterkeyhint="next"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="role">Register As</label>
+                    <select id="role" name="role" class="input-control">
+                        <option value="Complainant">Complainant (Standard User)</option>
+                        <option value="Staff">Staff Member</option>
+                    </select>
+                </div>
+
+                <!-- Department Selector (Conditional layout) -->
+                <div class="form-group" id="dept-group" style="display: none;">
+                    <label for="department">Department Allocation</label>
+                    <select id="department" name="department" class="input-control">
+                        <option value="Human Resources">Human Resources</option>
+                        <option value="IT">IT</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Operations">Operations</option>
+                    </select>
+                </div>
+
+                <button type="submit" id="submit-btn" class="btn btn-primary" style="margin-top: 1rem;">
+                    Sign Up Account
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                Already have an account? <a href="login.html">Sign in here</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const registerForm = document.getElementById('register-form');
+        const roleSelect = document.getElementById('role');
+        const deptGroup = document.getElementById('dept-group');
+        const alertBox = document.getElementById('alert-box');
+        const submitBtn = document.getElementById('submit-btn');
+
+        // Toggle department layout based on selected Role
+        roleSelect.addEventListener('change', () => {
+            if (roleSelect.value === 'Staff') {
+                deptGroup.style.display = 'block';
+            } else {
+                deptGroup.style.display = 'none';
+            }
+        });
+
+        // Form Submit
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            alertBox.style.display = 'none';
+
+            if (!registerForm.checkValidity()) {
+                showAlert('Please fill in all required fields correctly.', 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Creating Account...';
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const role = roleSelect.value;
+            const department = role === 'Staff' ? document.getElementById('department').value : null;
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password, role, department })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showAlert('Success! Account created. Redirecting to login...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 1000);
+                } else {
+                    showAlert(data.message || 'Registration failed. Try again.', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Sign Up Account';
+                }
+            } catch (error) {
+                showAlert('Unable to contact the server. Please check connection.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Sign Up Account';
+            }
+        });
+
+        function showAlert(message, type) {
+            alertBox.textContent = message;
+            alertBox.className = `alert alert-${type}`;
+            alertBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

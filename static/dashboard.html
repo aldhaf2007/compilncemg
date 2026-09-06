@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMS - Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Local Chart.js for Offline Support -->
+    <script src="js/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <h2>CMS Portal</h2>
+            </div>
+            
+            <div class="user-profile-badge">
+                <div class="username" id="sidebar-username">Loading...</div>
+                <div class="role" id="sidebar-role">Role</div>
+                <div class="dept" id="sidebar-dept" style="display: none;">Dept</div>
+            </div>
+
+            <!-- Role-based navigation buttons -->
+            <nav class="sidebar-nav" id="sidebar-nav-links">
+                <!-- Links will be injected dynamically based on roles -->
+            </nav>
+
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="btn btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Panel content -->
+        <main class="main-content">
+            
+            <!-- Navbar Header -->
+            <header class="top-navbar">
+                <h2 id="navbar-title">Dashboard Overview</h2>
+                <div class="navbar-actions">
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);" id="navbar-welcome">Welcome, User</span>
+                </div>
+            </header>
+
+            <!-- Dashboard Body -->
+            <div class="panel-body">
+                
+                <!-- 1. COMPLAINANT VIEWS -->
+                
+                <!-- Complainant Overview -->
+                <section id="complainant-overview" class="dashboard-panel">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="title">My Active Tickets</span>
+                            <span class="value" id="comp-stat-active">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="title">Resolved Tickets</span>
+                            <span class="value" id="comp-stat-resolved">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="title">Total Filed</span>
+                            <span class="value" id="comp-stat-total">0</span>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <!-- Submit complaint form -->
+                        <div class="section-card">
+                            <h3>File a New Complaint</h3>
+                            <div id="file-alert" class="alert" style="display: none;"></div>
+                            
+                            <form id="complaint-form" enctype="multipart/form-data">
+                                <div class="form-group">
+                                    <label for="comp-title">Complaint Title</label>
+                                    <input type="text" id="comp-title" name="title" class="input-control" required placeholder="Brief title summarizing the issue">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="comp-category">Category</label>
+                                    <select id="comp-category" name="category" class="input-control" required>
+                                        <option value="" disabled selected>Select Category</option>
+                                        <option value="HR">HR (Human Resources, Staff, Conduct)</option>
+                                        <option value="IT">IT (System Access, Equipment, Network)</option>
+                                        <option value="Finance">Finance (Expenses, Payroll, Invoicing)</option>
+                                        <option value="Operations">Operations (Facilities, Safety, Logistics)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="comp-priority">Priority Flag</label>
+                                    <select id="comp-priority" name="priority" class="input-control" required>
+                                        <option value="Low">Low Priority</option>
+                                        <option value="Medium" selected>Medium Priority</option>
+                                        <option value="High">High Priority</option>
+                                        <option value="Critical">Critical (Immediate Block)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="comp-desc">Structural Description</label>
+                                    <textarea id="comp-desc" name="description" class="input-control" required placeholder="Detail the complaint structural parameters, events, and metrics."></textarea>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Evidence intake attachment</label>
+                                    <div class="file-upload-wrapper">
+                                        <div class="file-upload-icon">📁</div>
+                                        <div class="file-upload-text">Drag file here or click to choose evidence attachment</div>
+                                        <input type="file" id="comp-evidence" name="evidence">
+                                        <div class="file-upload-name" id="file-chosen-name"></div>
+                                    </div>
+                                    <span class="hint" style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-top: 0.25rem;">
+                                        Allowed: png, jpg, jpeg, gif, pdf, doc, docx, txt (Max 16MB)
+                                    </span>
+                                </div>
+
+                                <button type="submit" id="file-submit-btn" class="btn btn-primary">Submit Secure Complaint</button>
+                            </form>
+                        </div>
+
+                        <!-- Mini list of complaints -->
+                        <div class="section-card">
+                            <h3>My Recent Complaints</h3>
+                            <div class="ticket-list" id="comp-recent-list">
+                                <div class="no-data-msg">No complaints filed yet. Use the form to submit one.</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Complainant Complaint Tracker -->
+                <section id="complainant-tracker" class="dashboard-panel">
+                    <div class="dashboard-grid" style="grid-template-columns: 350px 1fr;">
+                        <div class="section-card" style="padding: 1.25rem;">
+                            <h3>All Filed Complaints</h3>
+                            <div class="ticket-list" id="comp-tracker-list">
+                                <!-- Loaded dynamically -->
+                            </div>
+                        </div>
+
+                        <div class="section-card" id="comp-detail-panel">
+                            <div class="no-data-msg">Select a complaint from the left panel list to view details and status timeline.</div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 2. STAFF VIEWS -->
+                
+                <!-- Staff Queue Panel -->
+                <section id="staff-queue" class="dashboard-panel">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="title">My Unresolved Queue</span>
+                            <span class="value" id="staff-stat-unresolved">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="title">My Resolved Total</span>
+                            <span class="value" id="staff-stat-resolved">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="title">Escalated Tickets</span>
+                            <span class="value" id="staff-stat-escalated">0</span>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid" style="grid-template-columns: 380px 1fr;">
+                        <!-- Assigned Complaints Queue -->
+                        <div class="section-card">
+                            <h3>My Assignment Queue</h3>
+                            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                                <select id="staff-status-filter" class="input-control" style="font-size: 0.8rem; padding: 0.5rem;">
+                                    <option value="">All Statuses</option>
+                                    <option value="Filed">Filed</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Escalated">Escalated</option>
+                                    <option value="Resolved">Resolved</option>
+                                </select>
+                            </div>
+                            <div class="ticket-list" id="staff-queue-list">
+                                <!-- Dynamic queue cards -->
+                            </div>
+                        </div>
+
+                        <!-- Detail and modification pane -->
+                        <div class="section-card" id="staff-detail-panel">
+                            <div class="no-data-msg">Select a complaint from the queue list to update its status or view details.</div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- 3. ADMIN VIEWS -->
+
+                <!-- Admin Registry Store -->
+                <section id="admin-registry" class="dashboard-panel">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="title">Total Active Complaints</span>
+                            <span class="value" id="admin-stat-active">0</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="title">System Resolution Rate</span>
+                            <span class="value" id="admin-stat-rate">0%</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="title">Avg Resolution Speed</span>
+                            <span class="value" id="admin-stat-speed">0h</span>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid" style="grid-template-columns: 1.1fr 0.9fr; gap: 20px;">
+                        <!-- Left Panel: Registry Table -->
+                        <div class="section-card" style="padding: 15px;">
+                            <h3>Complaint Records Registry</h3>
+                            
+                            <!-- Search & Filter Controls -->
+                            <div class="filters-bar">
+                                <input type="text" id="admin-search" class="input-control search-input" placeholder="Search by title (LIKE %query%)...">
+                                
+                                <select id="admin-filter-category" class="input-control select-filter">
+                                    <option value="">All Categories</option>
+                                    <option value="HR">HR</option>
+                                    <option value="IT">IT</option>
+                                    <option value="Finance">Finance</option>
+                                    <option value="Operations">Operations</option>
+                                </select>
+
+                                <select id="admin-filter-priority" class="input-control select-filter">
+                                    <option value="">All Priorities</option>
+                                    <option value="Low">Low</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="High">High</option>
+                                    <option value="Critical">Critical</option>
+                                </select>
+
+                                <select id="admin-filter-status" class="input-control select-filter">
+                                    <option value="">All Statuses</option>
+                                    <option value="Filed">Filed</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Escalated">Escalated</option>
+                                    <option value="Resolved">Resolved</option>
+                                </select>
+                            </div>
+
+                            <div class="table-wrapper">
+                                <table class="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Title</th>
+                                            <th>Complainant</th>
+                                            <th>Category</th>
+                                            <th>Priority</th>
+                                            <th>Assigned Staff</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-table-body">
+                                        <!-- Dynamic table content -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Admin Detail & Action Panel -->
+                        <div class="section-card" id="admin-detail-panel" style="padding: 15px;">
+                                <div class="no-data-msg">Select a complaint from the registry table to view details, tracking status, or to update and resolve.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Admin Analytics Dashboard -->
+                <section id="admin-analytics" class="dashboard-panel">
+                    <!-- KPI Cards Row -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px;">
+                        <div class="section-card" style="padding: 15px; margin-bottom: 0; text-align: center; border-top: 3px solid var(--academic-blue);">
+                            <span style="font-size: 11px; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;">Total Complaints</span>
+                            <h2 style="font-size: 2rem; margin: 5px 0; border: none; padding: 0;" id="kpi-total-complaints">0</h2>
+                            <p style="font-size: 11px; margin: 0; color: var(--text-secondary);">Logged in registry</p>
+                        </div>
+                        <div class="section-card" style="padding: 15px; margin-bottom: 0; text-align: center; border-top: 3px solid #10b981;">
+                            <span style="font-size: 11px; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;">Resolved Cases</span>
+                            <h2 style="font-size: 2rem; margin: 5px 0; border: none; padding: 0; color: #10b981;" id="kpi-resolved-cases">0</h2>
+                            <p style="font-size: 11px; margin: 0; color: var(--text-secondary);" id="kpi-resolved-percent">0% Resolution Rate</p>
+                        </div>
+                        <div class="section-card" style="padding: 15px; margin-bottom: 0; text-align: center; border-top: 3px solid #eab308;">
+                            <span style="font-size: 11px; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;">Active Backlog</span>
+                            <h2 style="font-size: 2rem; margin: 5px 0; border: none; padding: 0; color: #eab308;" id="kpi-active-backlog">0</h2>
+                            <p style="font-size: 11px; margin: 0; color: var(--text-secondary);">Awaiting resolution</p>
+                        </div>
+                        <div class="section-card" style="padding: 15px; margin-bottom: 0; text-align: center; border-top: 3px solid #ef4444;">
+                            <span style="font-size: 11px; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;">Avg Resolution Speed</span>
+                            <h2 style="font-size: 2rem; margin: 5px 0; border: none; padding: 0; color: #ef4444;" id="analytics-avg-resolution">0 Hours</h2>
+                            <p style="font-size: 11px; margin: 0; color: var(--text-secondary);">Per completed ticket</p>
+                        </div>
+                    </div>
+
+                    <!-- Split Panels for Visuals & Academic Tables -->
+                    <div class="dashboard-grid" style="grid-template-columns: 1.2fr 0.8fr; gap: 25px; margin-bottom: 25px;">
+                        
+                        <!-- Left Panel: Chart Visualizations -->
+                        <div class="section-card" style="padding: 15px; margin-bottom: 0;">
+                            <h3 style="font-size: 14px; margin-bottom: 15px; border-bottom: 1.5px solid var(--border-color); padding-bottom: 5px;">Visual Distribution Charts</h3>
+                            <div class="charts-grid" style="grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                                <div class="chart-card" style="border: 1px solid var(--border-color); padding: 10px; background: #fff; margin-bottom: 0;">
+                                    <h4 style="font-size: 11px; text-align: center; margin-bottom: 10px;">By Category</h4>
+                                    <div class="chart-container-canvas" style="height: 140px; position: relative;">
+                                        <canvas id="category-chart"></canvas>
+                                    </div>
+                                </div>
+                                <div class="chart-card" style="border: 1px solid var(--border-color); padding: 10px; background: #fff; margin-bottom: 0;">
+                                    <h4 style="font-size: 11px; text-align: center; margin-bottom: 10px;">By Status</h4>
+                                    <div class="chart-container-canvas" style="height: 140px; position: relative;">
+                                        <canvas id="status-chart"></canvas>
+                                    </div>
+                                </div>
+                                <div class="chart-card" style="border: 1px solid var(--border-color); padding: 10px; background: #fff; margin-bottom: 0;">
+                                    <h4 style="font-size: 11px; text-align: center; margin-bottom: 10px;">By Priority</h4>
+                                    <div class="chart-container-canvas" style="height: 140px; position: relative;">
+                                        <canvas id="priority-chart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Executive Insights -->
+                        <div class="section-card" style="padding: 15px; margin-bottom: 0;">
+                            <h3 style="font-size: 14px; margin-bottom: 15px; border-bottom: 1.5px solid var(--border-color); padding-bottom: 5px;">System Analytics Insight Reports</h3>
+                            <div style="font-size: 12px; line-height: 1.6; color: var(--text-secondary);" id="analytics-insights-content">
+                                <ul style="margin: 0; padding-left: 15px;">
+                                    <li style="margin-bottom: 8px;"><strong>Workload Balance</strong>: Loading metrics...</li>
+                                    <li style="margin-bottom: 8px;"><strong>Critical Overload</strong>: Loading metrics...</li>
+                                    <li style="margin-bottom: 8px;"><strong>Operational Speed</strong>: Loading metrics...</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Breakdown Data Tables Grid (Academic Style) -->
+                    <div class="section-card" style="padding: 15px;">
+                        <h3 style="font-size: 14px; margin-bottom: 15px; border-bottom: 1.5px solid var(--border-color); padding-bottom: 5px;">Statistical Breakdown Ledger</h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                            <div>
+                                <h4 style="font-size: 12px; margin-bottom: 8px; color: var(--academic-blue);">Category Metric Distribution</h4>
+                                <table class="admin-table" style="font-size: 11px;">
+                                    <thead>
+                                        <tr>
+                                            <th>Category</th>
+                                            <th>Count</th>
+                                            <th>Ratio</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbl-category-breakdown">
+                                        <!-- Loaded dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div>
+                                <h4 style="font-size: 12px; margin-bottom: 8px; color: var(--academic-blue);">Status Transition Breakdown</h4>
+                                <table class="admin-table" style="font-size: 11px;">
+                                    <thead>
+                                        <tr>
+                                            <th>Status</th>
+                                            <th>Count</th>
+                                            <th>Ratio</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbl-status-breakdown">
+                                        <!-- Loaded dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div>
+                                <h4 style="font-size: 12px; margin-bottom: 8px; color: var(--academic-blue);">Priority Severity Distribution</h4>
+                                <table class="admin-table" style="font-size: 11px;">
+                                    <thead>
+                                        <tr>
+                                            <th>Priority</th>
+                                            <th>Count</th>
+                                            <th>Ratio</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbl-priority-breakdown">
+                                        <!-- Loaded dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Admin User Management Panel -->
+                <section id="admin-users" class="dashboard-panel">
+                    <div class="dashboard-grid" style="grid-template-columns: 1.2fr 0.8fr; gap: 30px;">
+                        
+                        <!-- Left Panel: User Directory Table -->
+                        <div class="section-card" style="padding: 15px;">
+                            <h3>System User Directory</h3>
+                            <div id="admin-users-list-alert" class="alert" style="display: none;"></div>
+                            
+                            <div class="table-wrapper">
+                                <table class="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Username</th>
+                                            <th>Role</th>
+                                            <th>Department</th>
+                                            <th>Joined Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-users-table-body">
+                                        <!-- Loaded dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Seeded credentials reference for viewing later -->
+                            <div style="margin-top: 25px;">
+                                <h4 style="font-size: 13px; color: var(--academic-blue); border-bottom: 1px dashed var(--border-color); padding-bottom: 5px; margin-bottom: 10px;">
+                                    Default System Accounts Reference Directory
+                                </h4>
+                                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">
+                                    For manual testing, reference the seeded account credentials here:
+                                </p>
+                                <div class="table-wrapper">
+                                    <table class="admin-table" style="font-size: 11px;">
+                                        <thead>
+                                            <tr>
+                                                <th>Seeded Username</th>
+                                                <th>Assigned Role</th>
+                                                <th>Department</th>
+                                                <th>Initial Plain Password</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>admin</strong></td>
+                                                <td>Admin</td>
+                                                <td>None</td>
+                                                <td><code>admin123</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>staff_hr</strong></td>
+                                                <td>Staff</td>
+                                                <td>Human Resources</td>
+                                                <td><code>staff123</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>staff_it</strong></td>
+                                                <td>Staff</td>
+                                                <td>IT</td>
+                                                <td><code>staff123</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>staff_fin</strong></td>
+                                                <td>Staff</td>
+                                                <td>Finance</td>
+                                                <td><code>staff123</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>staff_ops</strong></td>
+                                                <td>Staff</td>
+                                                <td>Operations</td>
+                                                <td><code>staff123</code></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>john_doe</strong></td>
+                                                <td>Complainant</td>
+                                                <td>None</td>
+                                                <td><code>john123</code></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Right Panel: Create User Form -->
+                        <div class="section-card" style="padding: 15px;">
+                            <h3>Register New System User</h3>
+                            <div id="admin-user-create-alert" class="alert" style="display: none;"></div>
+
+                            <form id="admin-create-user-form" novalidate>
+                                <div class="form-group">
+                                    <label for="admin-user-username">Username</label>
+                                    <input type="text" id="admin-user-username" class="input-control" required minlength="3" placeholder="Enter username">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="admin-user-password">Password</label>
+                                    <input type="password" id="admin-user-password" class="input-control" required minlength="6" placeholder="Enter secure password">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="admin-user-role">System Role</label>
+                                    <select id="admin-user-role" class="input-control" required>
+                                        <option value="Complainant" selected>Complainant (Standard User)</option>
+                                        <option value="Staff">Staff Member</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" id="admin-user-dept-group" style="display: none;">
+                                    <label for="admin-user-dept">Department Allocation</label>
+                                    <select id="admin-user-dept" class="input-control">
+                                        <option value="Human Resources">Human Resources</option>
+                                        <option value="IT" selected>IT</option>
+                                        <option value="Finance">Finance</option>
+                                        <option value="Operations">Operations</option>
+                                    </select>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary" id="admin-user-submit-btn" style="margin-top: 10px;">
+                                    Create User Account
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- REASSIGNMENT OVERRIDE MODAL -->
+    <div class="modal-overlay" id="reassign-modal">
+        <div class="modal-card">
+            <button class="modal-close" id="modal-close-btn">&times;</button>
+            <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 1.5rem;">Manual Override Assignment</h3>
+            <div id="modal-alert" class="alert" style="display: none;"></div>
+            
+            <form id="reassign-form">
+                <input type="hidden" id="modal-complaint-id">
+                
+                <div class="form-group">
+                    <label>Complaint Details</label>
+                    <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem;" id="modal-complaint-info">
+                        Loading info...
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="modal-staff-select">Select Assignment Target</label>
+                    <select id="modal-staff-select" class="input-control" required>
+                        <!-- Staff choices will be loaded dynamically -->
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="modal-submit-btn">Apply Override Assignment</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Import logic app.js -->
+    <script src="js/app.js"></script>
+</body>
+</html>
