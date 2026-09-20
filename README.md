@@ -1,11 +1,13 @@
 # Complaint Management System (CMS)
 
-A modern, full-stack Complaint Management System built with Python Flask, RESTful APIs, JWT Authentication, SQLite, and a responsive web dashboard.
+A modern, full-stack Complaint Management System built with Python Flask, RESTful APIs, JWT Authentication, MySQL, and a responsive web dashboard.
 
 ---
 
 ## 🌟 Key Features
 
+- **Permanent MySQL Database**: High-performance relational database storage (`complaint_db`) supporting InnoDB foreign keys, cascades, and ACID compliance.
+- **Automated 1-Command Setup for Windows and Linux**: Automated script detects your OS, checks if MySQL is installed, automatically installs & starts MySQL Server if missing, installs Python dependencies, creates the database schema, and starts the server.
 - **Role-Based Access Control (RBAC)**:
   - **Complainant**: Submit new complaints, attach evidence files, track status updates in real-time.
   - **Staff**: View assigned department complaints, update status, add audit logs/resolutions.
@@ -22,130 +24,93 @@ A modern, full-stack Complaint Management System built with Python Flask, RESTfu
 
 ```text
 compilncemg/
-├── app.py              # Main Flask application (REST API & Web Server)
-├── config.py           # Configuration settings & Environment variables
-├── db_setup.py         # SQLite database schema initialization & seed script
-├── convert_sqlite.py   # Database migration/utility helper
-├── requirements.txt    # Python package dependencies (Flask, Gunicorn, PyJWT, etc.)
-├── Procfile            # Render / Heroku Web process declaration
-├── render.yaml         # Render Blueprint configuration for 1-click deploy
-├── setup.bat / .sh     # Automated setup script (Windows / Linux)
-├── run.bat / .sh       # Application launcher script (Windows / Linux)
-├── static/             # Frontend UI assets
-│   ├── css/            # Stylesheets
-│   ├── js/             # Frontend JavaScript & Chart integrations
-│   ├── login.html      # Authentication portal
-│   ├── register.html   # Registration view
-│   └── dashboard.html  # Main interactive dashboard
-└── uploads/            # Evidence file upload directory
+├── app.py                # Main Flask application (REST API & Web Server)
+├── config.py             # Configuration settings & MySQL connection factory
+├── db_setup.py           # MySQL database schema initialization & seed script
+├── requirements.txt      # Python dependencies (Flask, mysql-connector-python, etc.)
+├── setup_and_run.sh      # 1-Click Automated Setup & Launcher for Linux / macOS
+├── setup_and_run.bat     # 1-Click Automated Setup & Launcher for Windows (Command Prompt)
+├── setup_and_run.ps1     # 1-Click Automated Setup & Launcher for Windows (PowerShell)
+├── setup.sh / setup.bat  # Dependency & MySQL initialization only
+├── run.sh / run.bat      # Quick application launcher
+├── Procfile              # Production Web process declaration
+├── render.yaml           # Cloud deployment blueprint
+├── static/               # Frontend UI assets
+│   ├── css/              # Stylesheets
+│   ├── js/               # Frontend JavaScript & Chart integrations
+│   ├── login.html        # Authentication portal
+│   ├── register.html     # Registration view
+│   └── dashboard.html    # Main interactive dashboard
+└── uploads/              # Evidence file upload directory
 ```
 
 ---
 
-## 🚀 Quick Start Guide (Local Development)
+## 🚀 1-Command Quick Start
 
-### Prerequisites
-- Python 3.9 or higher installed.
-
-### 1. Installation
-
-#### On Linux / macOS:
+### On Linux / macOS:
+Open a terminal in this project folder and run:
 ```bash
-./setup.sh
+./setup_and_run.sh
 ```
+*What this does automatically:*
+1. Checks for Python 3 and creates an isolated virtual environment (`venv`).
+2. Checks if MySQL or MariaDB is installed. **If not installed, it automatically installs and starts it via your system package manager (`apt`, `dnf`, `yum`, `pacman`, or `zypper`)**.
+3. Installs all required Python libraries.
+4. Initializes the `complaint_db` database, creates all relational tables, and seeds initial users.
+5. Launches the Flask server at `http://localhost:5000/`.
 
-#### On Windows:
-Double-click `setup.bat` or run:
+---
+
+### On Windows:
+Double-click **`setup_and_run.bat`** (or right-click `setup_and_run.ps1` and choose "Run with PowerShell"):
 ```cmd
-setup.bat
+setup_and_run.bat
 ```
-
-*This will automatically install required Python packages and initialize the SQLite database (`complaints.db`).*
-
----
-
-### 2. Configuration (Optional)
-
-Copy `.env.example` to `.env` to customize settings:
-
-```bash
-cp .env.example .env
-```
-
-Available environment variables:
-- `JWT_SECRET`: Custom secret key for signing tokens.
-- `SMTP_SERVER`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`: Email notification settings.
-- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`: SMS notification settings.
-
----
-
-### 3. Running the Application Locally
-
-#### On Linux / macOS:
-```bash
-./run.sh
-```
-
-#### On Windows:
-Double-click `run.bat` or run:
-```cmd
-run.bat
-```
-
-Open your browser and navigate to:
-**`http://127.0.0.1:5000`**
-
----
-
-## ☁️ Deploying to Render
-
-### Option A: 1-Click Deployment with Render Blueprints (Recommended)
-
-1. Log in to [Render Dashboard](https://dashboard.render.com/).
-2. Click **New +** and select **Blueprint**.
-3. Connect your GitHub repository: `aldhaf2007/compilncemg`.
-4. Render will automatically read `render.yaml`, configure the Python environment, run the database setup, and deploy the service with `gunicorn app:app`.
-5. Click **Apply**.
-
----
-
-### Option B: Manual Web Service Deployment on Render
-
-1. Log in to [Render Dashboard](https://dashboard.render.com/).
-2. Click **New +** -> **Web Service**.
-3. Select your repository `aldhaf2007/compilncemg`.
-4. Configure the service settings:
-   - **Name**: `compilncemg`
-   - **Environment**: `Python 3`
-   - **Build Command**: `pip install -r requirements.txt && python db_setup.py`
-   - **Start Command**: `gunicorn app:app`
-5. Add Environment Variables under **Advanced**:
-   - `JWT_SECRET`: *(Enter a secure random string)*
-   - `PYTHON_VERSION`: `3.11.9`
-6. Click **Create Web Service**.
+*What this does automatically:*
+1. Checks for Python (and auto-installs via `winget` if missing).
+2. Checks for MySQL / MariaDB Server. **If missing, it automatically installs MySQL Server via `winget` and starts the service**.
+3. Sets up a local virtual environment and installs Python dependencies.
+4. Initializes the `complaint_db` database and schema.
+5. Automatically opens your browser at `http://localhost:5000/` and starts the server.
 
 ---
 
 ## 🔑 Default Test Accounts
 
-Initial seed users pre-populated by `db_setup.py`:
-
-| Username | Password | Role | Department |
+| Role | Username | Password | Department |
 | :--- | :--- | :--- | :--- |
-| `admin` | `admin123` | **Admin** | *System Admin* |
-| `staff_hr` | `staff123` | **Staff** | Human Resources |
-| `staff_it` | `staff123` | **Staff** | IT |
-| `staff_fin` | `staff123` | **Staff** | Finance |
-| `staff_ops` | `staff123` | **Staff** | Operations |
-| `john_doe` | `john123` | **Complainant** | *N/A* |
+| **System Administrator** | `admin` | `admin123` | System Master |
+| **Staff (IT)** | `staff_it` | `staff123` | IT Support |
+| **Staff (HR)** | `staff_hr` | `staff123` | Human Resources |
+| **Staff (Operations)** | `staff_ops` | `staff123` | Operations |
+| **Staff (Finance)** | `staff_fin` | `staff123` | Finance |
+| **Complainant** | `john_doe` | `john123` | Standard User |
 
 ---
 
-## 🔌 API Endpoints Summary
+## ⚙️ Configuration (.env)
 
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User authentication & JWT generation
-- `GET /api/complaints` - Fetch complaints list (role-filtered)
-- `POST /api/complaints` - File a new complaint (with optional evidence file upload)
-- `PUT /api/complaints/<id>` - Update complaint status/assignment
-- `GET /api/analytics` - Fetch aggregate stats for charts
+If your MySQL instance has a custom password or remote host, create/edit `.env`:
+
+```ini
+# MySQL Configuration
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_NAME=complaint_db
+
+# Security
+JWT_SECRET=super-secret-key-1234567890-cms-system
+JWT_EXPIRY_HOURS=24
+```
+
+---
+
+## 🧪 Verification & Testing
+
+To test the database and all API endpoints programmatically:
+```bash
+python3 -c "from app import app; from db_setup import setup_database; setup_database(); client=app.test_client(); resp=client.post('/api/auth/login', json={'username':'admin','password':'admin123'}); print('Status:', resp.status_code)"
+```

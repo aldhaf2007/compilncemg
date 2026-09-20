@@ -1,13 +1,19 @@
-#!/bin/bash
-echo "=========================================="
-echo "Starting CMS - Complaint Management System"
-echo "=========================================="
+#!/usr/bin/env bash
+# ==============================================================================
+# CMS System - Linux Quick Run
+# ==============================================================================
 
-if [ ! -f "complaints.db" ]; then
-    echo "Database not found. Running initial setup..."
-    python3 db_setup.py
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+if [ -f "venv/bin/activate" ]; then
+    source venv/bin/activate
 fi
 
-echo "Server starting at http://127.0.0.1:5000"
-echo "Press Ctrl+C to stop the server."
+echo "=========================================="
+echo "Starting Complaint Management System (CMS)"
+echo "Web portal: http://localhost:5000/"
+echo "Press CTRL+C to stop the server."
+echo "=========================================="
+
 python3 app.py

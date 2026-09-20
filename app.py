@@ -2,11 +2,11 @@ import os
 import datetime
 import jwt
 from flask import Flask, request, jsonify, send_from_directory, redirect
-import sqlite3
-from sqlite3 import Error
+import mysql.connector
+from mysql.connector import Error
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from config import Config
+from config import Config, get_mysql_connection_args
 import smtplib
 from email.mime.text import MIMEText
 from contextlib import contextmanager
@@ -17,21 +17,17 @@ app.config.from_object(Config)
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Auto-initialize SQLite database if not present
-if not os.path.exists(app.config['DB_FILE_PATH']):
+# Ensure database and tables exist on startup
+try:
     from db_setup import setup_database
     setup_database()
-
-
-def dict_factory(cursor, row):
-    return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
+except Exception as _db_init_err:
+    print(f'Database init note: {_db_init_err}')
 
 # Helper to get database connection
-def get_db_connection(dictionary=False):
-    conn = sqlite3.connect(app.config['DB_FILE_PATH'])
-    if dictionary:
-        conn.row_factory = dict_factory
-    return conn
+def get_db_connection():
+    conn_args = get_mysql_connection_args(with_database=True)
+    return mysql.connector.connect(**conn_args)
 
 # Context manager to prevent connection leaks
 @contextmanager
@@ -39,8 +35,8 @@ def db_cursor(dictionary=False):
     conn = None
     cursor = None
     try:
-        conn = get_db_connection(dictionary)
-        cursor = conn.cursor()
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=dictionary)
         yield cursor
         conn.commit()
     except Exception as e:
@@ -75,7 +71,7 @@ def token_required(f):
             data = jwt.decode(token, app.config['JWT_SECRET'], algorithms=['HS256'])
             # Fetch user from DB using connection context manager
             with db_cursor(dictionary=True) as cursor:
-                cursor.execute("SELECT id, username, role, department FROM users WHERE id = ?", (data['user_id'],))
+                cursor.execute("SELECT id, username, role, department FROM users WHERE id = %s", (data['user_id'],))
                 current_user = cursor.fetchone()
             
             if not current_user:
@@ -109,7 +105,7 @@ def auto_assign_complaint(category, cursor):
         SELECT u.id, COUNT(c.id) as active_count
         FROM users u
         LEFT JOIN complaints c ON u.id = c.assigned_to AND c.status != 'Resolved'
-        WHERE u.role = 'Staff' AND u.department = ?
+        WHERE u.role = 'Staff' AND u.department = %s
         GROUP BY u.id
         ORDER BY active_count ASC, u.id ASC
         LIMIT 1
@@ -205,12 +201,12 @@ def register():
     try:
         with db_cursor() as cursor:
             # Check if username exists
-            cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+            cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
             if cursor.fetchone():
                 return jsonify({'message': 'Username already exists!'}), 400
 
             cursor.execute(
-                "INSERT INTO users (username, password_hash, role, department) VALUES (?, ?, ?, ?)",
+                "INSERT INTO users (username, password_hash, role, department) VALUES (%s, %s, %s, %s)",
                 (username, password_hash, role, department)
             )
         return jsonify({'message': 'Registration successful!'}), 201
@@ -228,7 +224,7 @@ def login():
 
     try:
         with db_cursor(dictionary=True) as cursor:
-            cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
             user = cursor.fetchone()
 
         if not user or not check_password_hash(user['password_hash'], password):
@@ -300,7 +296,7 @@ def create_complaint(current_user):
             # Write to database
             cursor.execute(
                 """INSERT INTO complaints (complainant_id, title, description, category, priority, status, evidence_url, assigned_to) 
-                   VALUES (?, ?, ?, ?, ?, 'Filed', ?, ?)""",
+                   VALUES (%s, %s, %s, %s, %s, 'Filed', %s, %s)""",
                 (current_user['id'], title, description, category, priority, evidence_url, assigned_to)
             )
             complaint_id = cursor.lastrowid
@@ -308,7 +304,7 @@ def create_complaint(current_user):
             # If assigned, insert initial audit log
             if assigned_to:
                 cursor.execute(
-                    "INSERT INTO audit_logs (complaint_id, staff_id, action) VALUES (?, ?, ?)",
+                    "INSERT INTO audit_logs (complaint_id, staff_id, action) VALUES (%s, %s, %s)",
                     (complaint_id, assigned_to, "Complaint auto-assigned on creation based on category.")
                 )
 
@@ -341,7 +337,7 @@ def get_complaints(current_user):
                     SELECT c.*, u.username as assigned_staff_name 
                     FROM complaints c
                     LEFT JOIN users u ON c.assigned_to = u.id
-                    WHERE c.complainant_id = ?
+                    WHERE c.complainant_id = %s
                 """
                 params = [current_user['id']]
             elif role == 'Staff':
@@ -350,7 +346,7 @@ def get_complaints(current_user):
                     SELECT c.*, u.username as complainant_name 
                     FROM complaints c
                     JOIN users u ON c.complainant_id = u.id
-                    WHERE c.assigned_to = ?
+                    WHERE c.assigned_to = %s
                 """
                 params = [current_user['id']]
             else:  # Admin
@@ -366,16 +362,16 @@ def get_complaints(current_user):
 
             # Filters
             if search_query:
-                query += " AND c.title LIKE ?"
+                query += " AND c.title LIKE %s"
                 params.append(f"%{search_query}%")
             if category:
-                query += " AND c.category = ?"
+                query += " AND c.category = %s"
                 params.append(category)
             if status:
-                query += " AND c.status = ?"
+                query += " AND c.status = %s"
                 params.append(status)
             if priority:
-                query += " AND c.priority = ?"
+                query += " AND c.priority = %s"
                 params.append(priority)
 
             query += " ORDER BY c.created_at DESC"
@@ -398,7 +394,7 @@ def get_complaint_details(current_user, complaint_id):
                 FROM complaints c
                 JOIN users u1 ON c.complainant_id = u1.id
                 LEFT JOIN users u2 ON c.assigned_to = u2.id
-                WHERE c.id = ?
+                WHERE c.id = %s
             """, (complaint_id,))
             complaint = cursor.fetchone()
             
@@ -417,7 +413,7 @@ def get_complaint_details(current_user, complaint_id):
                 SELECT a.*, u.username as staff_name 
                 FROM audit_logs a
                 JOIN users u ON a.staff_id = u.id
-                WHERE a.complaint_id = ?
+                WHERE a.complaint_id = %s
                 ORDER BY a.timestamp ASC
             """, (complaint_id,))
             audit_logs = cursor.fetchall()
@@ -442,7 +438,7 @@ def update_complaint(current_user, complaint_id):
     try:
         with db_cursor(dictionary=True) as cursor:
             # Load current state
-            cursor.execute("SELECT * FROM complaints WHERE id = ?", (complaint_id,))
+            cursor.execute("SELECT * FROM complaints WHERE id = %s", (complaint_id,))
             complaint = cursor.fetchone()
             
             if not complaint:
@@ -466,17 +462,17 @@ def update_complaint(current_user, complaint_id):
             
             # Perform updates
             if new_status and new_status != complaint['status']:
-                cursor.execute("UPDATE complaints SET status = ? WHERE id = ?", (new_status, complaint_id))
+                cursor.execute("UPDATE complaints SET status = %s WHERE id = %s", (new_status, complaint_id))
                 # Insert audit log
                 audit_message = f"Status updated from '{complaint['status']}' to '{new_status}'."
                 cursor.execute(
-                    "INSERT INTO audit_logs (complaint_id, staff_id, action) VALUES (?, ?, ?)",
+                    "INSERT INTO audit_logs (complaint_id, staff_id, action) VALUES (%s, %s, %s)",
                     (complaint_id, current_user['id'], audit_message)
                 )
                 actions_taken.append(audit_message)
                 
                 # Fetch complainant username to send notification
-                cursor.execute("SELECT username FROM users WHERE id = ?", (complaint['complainant_id'],))
+                cursor.execute("SELECT username FROM users WHERE id = %s", (complaint['complainant_id'],))
                 complainant = cursor.fetchone()
                 if complainant:
                     send_notification(
@@ -492,16 +488,16 @@ def update_complaint(current_user, complaint_id):
                     return jsonify({'message': 'Only Admins can override assignment targets!'}), 403
                     
                 # Verify assigned user is indeed Staff/Admin
-                cursor.execute("SELECT username, role FROM users WHERE id = ?", (new_assignment,))
+                cursor.execute("SELECT username, role FROM users WHERE id = %s", (new_assignment,))
                 assigned_user = cursor.fetchone()
                 if not assigned_user or assigned_user['role'] not in ['Staff', 'Admin']:
                     return jsonify({'message': 'Assignment target must be a valid staff or admin user!'}), 400
 
-                cursor.execute("UPDATE complaints SET assigned_to = ? WHERE id = ?", (new_assignment, complaint_id))
+                cursor.execute("UPDATE complaints SET assigned_to = %s WHERE id = %s", (new_assignment, complaint_id))
                 # Insert audit log
                 audit_message = f"Assignment updated to {assigned_user['username']} (Manual Admin Override)."
                 cursor.execute(
-                    "INSERT INTO audit_logs (complaint_id, staff_id, action) VALUES (?, ?, ?)",
+                    "INSERT INTO audit_logs (complaint_id, staff_id, action) VALUES (%s, %s, %s)",
                     (complaint_id, current_user['id'], audit_message)
                 )
                 actions_taken.append(audit_message)
@@ -518,7 +514,7 @@ def update_complaint(current_user, complaint_id):
 def download_evidence(current_user, complaint_id):
     try:
         with db_cursor(dictionary=True) as cursor:
-            cursor.execute("SELECT complainant_id, assigned_to, evidence_url FROM complaints WHERE id = ?", (complaint_id,))
+            cursor.execute("SELECT complainant_id, assigned_to, evidence_url FROM complaints WHERE id = %s", (complaint_id,))
             complaint = cursor.fetchone()
         
         if not complaint or not complaint['evidence_url']:
@@ -570,9 +566,9 @@ def get_analytics(current_user):
             priority_dist = cursor.fetchall()
 
             # 4. Average Resolution Time (in hours)
-            # Using julianday in hours for complaints where status = 'Resolved'
+            # Using TIMESTAMPDIFF in hours for complaints where status = 'Resolved'
             cursor.execute("""
-                SELECT AVG((julianday(updated_at) - julianday(created_at)) * 24) as avg_hours 
+                SELECT AVG(TIMESTAMPDIFF(HOUR, created_at, updated_at)) as avg_hours 
                 FROM complaints 
                 WHERE status = 'Resolved'
             """)
@@ -634,12 +630,12 @@ def admin_create_user(current_user):
     try:
         with db_cursor() as cursor:
             # Check if username exists
-            cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+            cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
             if cursor.fetchone():
                 return jsonify({'message': 'Username already exists!'}), 400
 
             cursor.execute(
-                "INSERT INTO users (username, password_hash, role, department) VALUES (?, ?, ?, ?)",
+                "INSERT INTO users (username, password_hash, role, department) VALUES (%s, %s, %s, %s)",
                 (username, password_hash, role, department)
             )
         return jsonify({'message': 'User registered successfully!'}), 201
@@ -659,12 +655,12 @@ def admin_delete_user(current_user, user_id):
     try:
         with db_cursor() as cursor:
             # Verify user exists
-            cursor.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+            cursor.execute("SELECT username FROM users WHERE id = %s", (user_id,))
             user_row = cursor.fetchone()
             if not user_row:
                 return jsonify({'message': 'User not found!'}), 404
 
-            cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
         return jsonify({'message': f"User '{user_row[0]}' deleted successfully!"}), 200
     except Error as e:
         return jsonify({'message': f'Database error: {str(e)}'}), 500
